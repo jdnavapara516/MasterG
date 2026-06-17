@@ -38,6 +38,18 @@ def register_view(request):
         user = User.objects.create_user(username=username, email=email, password=password)
         tokens = get_tokens_for_user(user)
         
+        # Get profile to fetch real streak and words learned
+        from vocabulary.views import get_user_profile
+        profile = get_user_profile(user)
+        words_learned = (
+            profile.a1_pointer +
+            profile.a2_pointer +
+            profile.b1_pointer +
+            profile.b2_pointer +
+            profile.c1_pointer +
+            profile.c2_pointer
+        )
+
         return Response({
             'message': 'User registered successfully.',
             'tokens': tokens,
@@ -46,10 +58,10 @@ def register_view(request):
                 'email': user.email,
                 'username': 'Jenil Navapara', # Mock default name
                 'level': 'Intermediate (B1)',
-                'streak': 12,
+                'streak': profile.current_streak,
                 'xp': 450,
                 'stats': {
-                    'wordsLearned': 142,
+                    'wordsLearned': words_learned,
                     'grammarLessonsCompleted': 18,
                     'speakingSessionsCompleted': 7,
                     'chatSessionsCompleted': 14,
@@ -84,6 +96,18 @@ def login_view(request):
 
     tokens = get_tokens_for_user(user)
     
+    # Get profile to fetch real streak and words learned
+    from vocabulary.views import get_user_profile
+    profile = get_user_profile(user)
+    words_learned = (
+        profile.a1_pointer +
+        profile.a2_pointer +
+        profile.b1_pointer +
+        profile.b2_pointer +
+        profile.c1_pointer +
+        profile.c2_pointer
+    )
+
     return Response({
         'message': 'Login successful.',
         'tokens': tokens,
@@ -92,10 +116,10 @@ def login_view(request):
             'email': user.email,
             'username': 'Jenil Navapara', # Mock default name
             'level': 'Intermediate (B1)',
-            'streak': 12,
+            'streak': profile.current_streak,
             'xp': 450,
             'stats': {
-                'wordsLearned': 142,
+                'wordsLearned': words_learned,
                 'grammarLessonsCompleted': 18,
                 'speakingSessionsCompleted': 7,
                 'chatSessionsCompleted': 14,

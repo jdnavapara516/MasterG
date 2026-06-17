@@ -261,6 +261,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void syncVocabularyProgress(int todayProgress, int streakDays) {
+    _vocabGoalCount = todayProgress.clamp(0, 5);
+    _streak.days = streakDays;
+    notifyListeners();
+  }
+
   void learnVocabularyWord(String wordText) {
     final word = _vocabularyList.firstWhere((w) => w.word == wordText);
     if (!word.isLearned) {

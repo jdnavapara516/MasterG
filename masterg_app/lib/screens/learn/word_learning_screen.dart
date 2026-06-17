@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../state/app_state.dart';
 import '../../theme/theme.dart';
 
 class WordLearningScreen extends StatefulWidget {
@@ -95,6 +96,13 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
     _todayProgress = data["today_progress"];
     _todayTarget = data["today_target"];
     _streak = data["streak"];
+
+    // Sync with global app state!
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppStateProvider.of(context).syncVocabularyProgress(_todayProgress, _streak);
+      }
+    });
   }
 
   Future<void> _handleNext() async {
@@ -128,6 +136,23 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
+          if (data["daily_completed"] == true) {
+            setState(() {
+              _streak = data["streak"];
+              _todayProgress = 5;
+              _isLoading = false;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                final appState = AppStateProvider.of(context);
+                appState.syncVocabularyProgress(5, _streak);
+                appState.addXp(50);
+              }
+            });
+            _showCompletionScreen();
+            return;
+          }
+
           setState(() {
             _updateStateFromData(data);
             _wordHistory.add(data);

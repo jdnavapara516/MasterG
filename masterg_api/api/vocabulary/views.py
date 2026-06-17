@@ -1,12 +1,14 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
-from .models import UserVocabularyProgress
+from django.utils import timezone
+from datetime import date, timedelta
+from .models import UserProfile, Vocabulary, VocabularySentence, DailyVocabularyProgress
 
-# Dictionary of vocabulary words for A1-C2 levels
-VOCABULARY_DATABASE = {
+# Rich seed data for Vocabulary levels
+SEED_VOCABULARY = {
     "A1": [
         {
             "word": "Ambitious",
@@ -24,7 +26,7 @@ VOCABULARY_DATABASE = {
         {
             "word": "Curious",
             "pronunciation": "kyoo-ree-uhs",
-            "gujarati_meaning": "जिज्ञासु / उत्सुक",
+            "gujarati_meaning": "જિજ્ઞાસુ / ઉત્સુક",
             "english_meaning": "Eager to know or learn something.",
             "sentences": [
                 "The boy was curious about how the machine works.",
@@ -63,8 +65,8 @@ VOCABULARY_DATABASE = {
         {
             "word": "Generous",
             "pronunciation": "jen-er-uhs",
-            "gujarati_meaning": "ઉદાર / દાતા",
-            "english_meaning": "Showing a readiness to give more of something than is strictly necessary.",
+            "gujarati_meaning": "ઉદાર",
+            "english_meaning": "Showing a readiness to give more of something than is necessary.",
             "sentences": [
                 "It was very generous of you to pay for dinner.",
                 "She is always generous with her praise.",
@@ -121,7 +123,7 @@ VOCABULARY_DATABASE = {
         {
             "word": "Pragmatic",
             "pronunciation": "prag-mat-ik",
-            "gujarati_meaning": "व्यवहारिक",
+            "gujarati_meaning": "વ્યવહારિક",
             "english_meaning": "Dealing with things realistically based on practical considerations.",
             "sentences": [
                 "We need a pragmatic solution to this traffic issue.",
@@ -136,7 +138,7 @@ VOCABULARY_DATABASE = {
         {
             "word": "Mitigate",
             "pronunciation": "mit-i-geyt",
-            "gujarati_meaning": "कम करना",
+            "gujarati_meaning": "નરમ કરવું / ઓછું કરવું",
             "english_meaning": "Make something bad less severe, serious, or painful.",
             "sentences": [
                 "The government took steps to mitigate the flood damage.",
@@ -151,7 +153,7 @@ VOCABULARY_DATABASE = {
         {
             "word": "Superfluous",
             "pronunciation": "soo-pur-floo-uhs",
-            "gujarati_meaning": "अनावश्यक",
+            "gujarati_meaning": "વધારાનું / બિનજરૂરી",
             "english_meaning": "Unnecessary, especially through being more than enough.",
             "sentences": [
                 "Please delete any superfluous words in your essay.",
@@ -164,106 +166,186 @@ VOCABULARY_DATABASE = {
     ]
 }
 
-def get_or_create_progress(user, level):
-    # Setup initial pointers
-    defaults = {
-        "A1": 45,
-        "A2": 10,
-        "B1": 5,
-        "B2": 0,
-        "C1": 0,
-        "C2": 0
-    }
-    initial_pointer = defaults.get(level, 0)
-    
-    progress, created = UserVocabularyProgress.objects.get_or_create(
+def seed_vocabulary_database():
+    if Vocabulary.objects.count() == 0:
+        for lvl, words in SEED_VOCABULARY.items():
+            for i, w in enumerate(words):
+                vocab = Vocabulary.objects.create(
+                    level=lvl,
+                    word_no=i + 1,
+                    word=w["word"],
+                    pronunciation=w["pronunciation"],
+                    gujarati_meaning=w["gujarati_meaning"],
+                    english_meaning=w["english_meaning"]
+                )
+                for sent in w["sentences"]:
+                    VocabularySentence.objects.create(
+                        vocabulary=vocab,
+                        sentence=sent
+                    )
+
+def get_user_profile(user):
+    profile, created = UserProfile.objects.get_or_create(
         user=user,
-        level=level,
-        defaults={'pointer': initial_pointer, 'today_progress': 0}
+        defaults={
+            'current_streak': 12,
+            'a1_pointer': 45,
+            'a2_pointer': 12,
+            'b1_pointer': 0,
+            'b2_pointer': 0,
+            'c1_pointer': 0,
+            'c2_pointer': 0,
+            'last_learning_date': timezone.now().date() - timedelta(days=1)
+        }
     )
-    return progress
+    return profile
 
 def get_user_from_request(request):
     if request.user and request.user.is_authenticated:
         return request.user
-    # Fallback to first user in db (for easy local testing)
+    # Fallback to first user for easy local testing
     user = User.objects.first()
     if not user:
-        # Create a mock user
         user = User.objects.create_user(username='guest', email='guest@masterg.com', password='password123')
     return user
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def levels_view(request):
+    seed_vocabulary_database()
     user = get_user_from_request(request)
-    levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-    response_data = []
+    profile = get_user_profile(user)
 
-    for lvl in levels:
-        prog = get_or_create_progress(user, lvl)
-        response_data.append({
-            "level": lvl,
-            "learned_words": prog.pointer
-        })
-
-    return Response(response_data, status=status.HTTP_200_OK)
+    return Response([
+        {"level": "A1", "learned_words": profile.a1_pointer},
+        {"level": "A2", "learned_words": profile.a2_pointer},
+        {"level": "B1", "learned_words": profile.b1_pointer},
+        {"level": "B2", "learned_words": profile.b2_pointer},
+        {"level": "C1", "learned_words": profile.c1_pointer},
+        {"level": "C2", "learned_words": profile.c2_pointer},
+    ], status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def current_word_view(request):
+    seed_vocabulary_database()
     user = get_user_from_request(request)
+    profile = get_user_profile(user)
     level = request.query_params.get('level', 'A1')
-    
-    prog = get_or_create_progress(user, level)
-    words = VOCABULARY_DATABASE.get(level, VOCABULARY_DATABASE["A1"])
-    
-    # Select word based on pointer (wrapping around list size)
-    word_index = prog.pointer % len(words)
-    word_info = words[word_index]
 
-    # Calculate today progress (1 to 5)
-    today_prog = (prog.today_progress % 5) + 1
+    # Get pointer for selected level
+    pointer = 0
+    if level == 'A1':
+        pointer = profile.a1_pointer
+    elif level == 'A2':
+        pointer = profile.a2_pointer
+    elif level == 'B1':
+        pointer = profile.b1_pointer
+    elif level == 'B2':
+        pointer = profile.b2_pointer
+    elif level == 'C1':
+        pointer = profile.c1_pointer
+    elif level == 'C2':
+        pointer = profile.c2_pointer
+
+    # Fetch word matching level and wrapped word_no
+    level_words = Vocabulary.objects.filter(level=level)
+    if not level_words.exists():
+        return Response({"error": "No words found for this level"}, status=status.HTTP_404_NOT_FOUND)
+
+    word_index = pointer % level_words.count()
+    word = level_words.all()[word_index]
+
+    # Get daily progress
+    today = timezone.now().date()
+    progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
 
     return Response({
-        "word_no": prog.pointer + 1,
-        "word": word_info["word"],
-        "pronunciation": word_info["pronunciation"],
-        "gujarati_meaning": word_info["gujarati_meaning"],
-        "english_meaning": word_info["english_meaning"],
-        "sentences": word_info["sentences"],
-        "today_progress": today_prog,
+        "word_no": pointer + 1,
+        "word": word.word,
+        "pronunciation": word.pronunciation,
+        "gujarati_meaning": word.gujarati_meaning,
+        "english_meaning": word.english_meaning,
+        "sentences": [s.sentence for s in word.sentences.all()],
+        "today_progress": progress.completed_words,
         "today_target": 5,
-        "streak": 12
+        "streak": profile.current_streak
     }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def next_word_view(request):
+    seed_vocabulary_database()
     user = get_user_from_request(request)
+    profile = get_user_profile(user)
     level = request.data.get('level', 'A1')
 
-    prog = get_or_create_progress(user, level)
-    
-    # Increment pointer and today_progress
-    prog.pointer += 1
-    prog.today_progress += 1
-    prog.save()
+    # Increment pointer
+    if level == 'A1':
+        profile.a1_pointer += 1
+        pointer = profile.a1_pointer
+    elif level == 'A2':
+        profile.a2_pointer += 1
+        pointer = profile.a2_pointer
+    elif level == 'B1':
+        profile.b1_pointer += 1
+        pointer = profile.b1_pointer
+    elif level == 'B2':
+        profile.b2_pointer += 1
+        pointer = profile.b2_pointer
+    elif level == 'C1':
+        profile.c1_pointer += 1
+        pointer = profile.c1_pointer
+    elif level == 'C2':
+        profile.c2_pointer += 1
+        pointer = profile.c2_pointer
+    else:
+        pointer = 0
 
-    words = VOCABULARY_DATABASE.get(level, VOCABULARY_DATABASE["A1"])
-    word_index = prog.pointer % len(words)
-    word_info = words[word_index]
+    profile.save()
 
-    today_prog = (prog.today_progress % 5) + 1
+    # Update Daily Progress
+    today = timezone.now().date()
+    progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
+    progress.completed_words += 1
+    progress.save()
+
+    # Check daily target completed (5 words)
+    if progress.completed_words >= 5:
+        # Streak Logic
+        last_date = profile.last_learning_date
+        
+        if last_date == today:
+            # Already completed today, no update
+            pass
+        elif last_date == today - timedelta(days=1):
+            # Completed yesterday, increment streak
+            profile.current_streak += 1
+        else:
+            # Missed a day or first learning
+            profile.current_streak = 1
+
+        profile.last_learning_date = today
+        profile.save()
+
+        return Response({
+            "daily_completed": True,
+            "streak": profile.current_streak
+        }, status=status.HTTP_200_OK)
+
+    # Return next word details
+    level_words = Vocabulary.objects.filter(level=level)
+    word_index = pointer % level_words.count()
+    word = level_words.all()[word_index]
 
     return Response({
-        "word_no": prog.pointer + 1,
-        "word": word_info["word"],
-        "pronunciation": word_info["pronunciation"],
-        "gujarati_meaning": word_info["gujarati_meaning"],
-        "english_meaning": word_info["english_meaning"],
-        "sentences": word_info["sentences"],
-        "today_progress": today_prog,
+        "word_no": pointer + 1,
+        "word": word.word,
+        "pronunciation": word.pronunciation,
+        "gujarati_meaning": word.gujarati_meaning,
+        "english_meaning": word.english_meaning,
+        "sentences": [s.sentence for s in word.sentences.all()],
+        "today_progress": progress.completed_words,
         "today_target": 5,
-        "streak": 12
+        "streak": profile.current_streak
     }, status=status.HTTP_200_OK)
