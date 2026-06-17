@@ -1,0 +1,59 @@
+# =========================
+# Python / Django
+# =========================
+
+masterg_api/venv/
+**/__pycache__/
+*.py[cod]
+*.log
+venv/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+
+# =========================
+# Flutter
+# =========================
+
+masterg_app/.dart_tool/
+masterg_app/build/
+masterg_app/.flutter-plugins
+masterg_app/.flutter-plugins-dependencies
+masterg_app/.packages
+masterg_app/.pub-cache/
+
+# Android Studio / IntelliJ
+masterg_app/.idea/
+*.iml
+
+# Flutter generated
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# =========================
+# VS Code
+# =========================
+
+.vscode/
+
+# =========================
+# OS Files
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Misc
+# =========================
+
+*.tmp
+*.swp
