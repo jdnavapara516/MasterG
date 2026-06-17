@@ -38,17 +38,19 @@ def register_view(request):
         user = User.objects.create_user(username=username, email=email, password=password)
         tokens = get_tokens_for_user(user)
         
-        # Get profile to fetch real streak and words learned
-        from vocabulary.views import get_user_profile
-        profile = get_user_profile(user)
-        words_learned = (
-            profile.a1_pointer +
-            profile.a2_pointer +
-            profile.b1_pointer +
-            profile.b2_pointer +
-            profile.c1_pointer +
-            profile.c2_pointer
+        # Create UserProfile explicitly for the new user starting at 0 progress
+        from vocabulary.models import UserProfile
+        profile = UserProfile.objects.create(
+            user=user,
+            current_streak=0,
+            a1_pointer=0,
+            a2_pointer=0,
+            b1_pointer=0,
+            b2_pointer=0,
+            c1_pointer=0,
+            c2_pointer=0
         )
+        words_learned = 0
 
         return Response({
             'message': 'User registered successfully.',
