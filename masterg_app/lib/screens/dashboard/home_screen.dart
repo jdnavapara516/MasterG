@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../state/app_state.dart';
 import '../../theme/theme.dart';
-import '../learn/vocabulary_screen.dart';
+import '../learn/vocabulary_levels_screen.dart';
 import '../learn/grammar_quiz_screen.dart';
 import '../learn/speaking_practice_screen.dart';
 
@@ -315,7 +315,7 @@ class HomeScreen extends StatelessWidget {
           context, theme, isDark,
           "Vocabulary", "Learn 5 new words daily",
           Icons.abc_rounded, Colors.blue, 0.6,
-          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VocabularyScreen())),
+          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VocabularyLevelsScreen())),
         ),
         _buildModuleCard(
           context, theme, isDark,
