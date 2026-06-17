@@ -52,13 +52,14 @@ def register_view(request):
         )
         words_learned = 0
 
+        display_name = user.email.split('@')[0].capitalize()
         return Response({
             'message': 'User registered successfully.',
             'tokens': tokens,
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'username': 'Jenil Navapara', # Mock default name
+                'username': display_name,
                 'level': 'Intermediate (B1)',
                 'streak': profile.current_streak,
                 'xp': 450,
@@ -110,13 +111,14 @@ def login_view(request):
         profile.c2_pointer
     )
 
+    display_name = user.email.split('@')[0].capitalize()
     return Response({
         'message': 'Login successful.',
         'tokens': tokens,
         'user': {
             'id': user.id,
             'email': user.email,
-            'username': 'Jenil Navapara', # Mock default name
+            'username': display_name,
             'level': 'Intermediate (B1)',
             'streak': profile.current_streak,
             'xp': 450,

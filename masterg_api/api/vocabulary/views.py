@@ -367,7 +367,9 @@ def user_profile_view(request):
         profile.c2_pointer
     )
 
+    display_name = user.email.split('@')[0].capitalize()
     return Response({
+        "username": display_name,
         "streak": profile.current_streak,
         "today_progress": progress.completed_words,
         "words_learned": words_learned,

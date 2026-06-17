@@ -265,6 +265,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+
   Future<void> fetchUserProfile() async {
     if (!_isLoggedIn) return;
     try {
@@ -278,6 +279,9 @@ class AppState extends ChangeNotifier {
         _streak.days = data["streak"] ?? _streak.days;
         _vocabGoalCount = data["today_progress"] ?? _vocabGoalCount;
         _stats.wordsLearned = data["words_learned"] ?? _stats.wordsLearned;
+        if (data["username"] != null) {
+          _userName = data["username"];
+        }
         notifyListeners();
       }
     } catch (_) {
