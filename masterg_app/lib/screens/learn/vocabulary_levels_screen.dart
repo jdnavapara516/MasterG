@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../state/app_state.dart';
 import '../../theme/theme.dart';
 import 'word_learning_screen.dart';
 
@@ -58,18 +59,29 @@ class _VocabularyLevelsScreenState extends State<VocabularyLevelsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchLevels();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLevels();
+    });
   }
 
   Future<void> _fetchLevels() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      final appState = AppStateProvider.of(context);
+      final token = appState.accessToken;
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+
       final response = await http.get(
         Uri.parse("http://127.0.0.1:8000/api/vocabulary/levels/"),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {

@@ -77,10 +77,10 @@ class HomeScreen extends StatelessWidget {
                   border: Border.all(color: theme.colorScheme.primary, width: 2),
                   gradient: AppTheme.primaryGradient,
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    "JN",
-                    style: TextStyle(
+                    appState.userName.split(" ").where((s) => s.isNotEmpty).map((s) => s[0].toUpperCase()).take(2).join(""),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -100,7 +100,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "Jenil 👋",
+                  "${appState.userName} 👋",
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -314,31 +314,31 @@ class HomeScreen extends StatelessWidget {
         _buildModuleCard(
           context, theme, isDark,
           "Vocabulary", "Learn 5 new words daily",
-          Icons.abc_rounded, Colors.blue, 0.6,
+          Icons.abc_rounded, Colors.blue, (appState.vocabGoalCount / 5.0).clamp(0.0, 1.0),
           () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VocabularyLevelsScreen())),
         ),
         _buildModuleCard(
           context, theme, isDark,
           "Grammar", "Grammar lessons and quizzes",
-          Icons.rule_folder_rounded, Colors.purple, 0.4,
+          Icons.rule_folder_rounded, Colors.purple, (appState.grammarGoalCount / 1.0).clamp(0.0, 1.0),
           () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GrammarQuizScreen())),
         ),
         _buildModuleCard(
           context, theme, isDark,
           "Listening", "Listening exercises and audio",
-          Icons.headset_rounded, Colors.pink, 0.2,
+          Icons.headset_rounded, Colors.pink, 0.0,
           () => _showComingSoonSnackBar(context, "Listening"),
         ),
         _buildModuleCard(
           context, theme, isDark,
           "Speaking", "AI speaking practice",
-          Icons.mic_external_on_rounded, Colors.orange, 0.3,
+          Icons.mic_external_on_rounded, Colors.orange, (appState.speakingGoalCount / 1.0).clamp(0.0, 1.0),
           () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SpeakingPracticeScreen())),
         ),
         _buildModuleCard(
           context, theme, isDark,
           "AI Chat", "Practice English conversations",
-          Icons.chat_bubble_rounded, Colors.teal, 0.7,
+          Icons.chat_bubble_rounded, Colors.teal, (appState.stats.chatSessionsCompleted / 20.0).clamp(0.0, 1.0),
           () => ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Tap the 'Chat' tab at the bottom to talk to G-Bot!"),
@@ -349,7 +349,7 @@ class HomeScreen extends StatelessWidget {
         _buildModuleCard(
           context, theme, isDark,
           "Revision", "Review learned vocabulary",
-          Icons.replay_circle_filled_rounded, Colors.amber, 0.9,
+          Icons.replay_circle_filled_rounded, Colors.amber, 0.0,
           () => _showComingSoonSnackBar(context, "Revision"),
         ),
       ],

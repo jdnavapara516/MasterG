@@ -66,10 +66,10 @@ class ProfileScreen extends StatelessWidget {
                   border: Border.all(color: theme.colorScheme.primary, width: 3),
                   gradient: AppTheme.primaryGradient,
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    "JN",
-                    style: TextStyle(
+                    appState.userName.split(" ").where((s) => s.isNotEmpty).map((s) => s[0].toUpperCase()).take(2).join(""),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
@@ -130,8 +130,8 @@ class ProfileScreen extends StatelessWidget {
       children: [
         _buildMilestoneCard(theme, isDark, "Words Learned", "${stats.wordsLearned}", Icons.translate_rounded, Colors.blue),
         _buildMilestoneCard(theme, isDark, "Current Streak", "${appState.streak.days} Days", Icons.local_fire_department_rounded, Colors.orange),
-        _buildMilestoneCard(theme, isDark, "Longest Streak", "24 Days", Icons.bolt_rounded, Colors.pink),
-        _buildMilestoneCard(theme, isDark, "Total XP Earned", "4.8k XP", Icons.stars_rounded, Colors.amber),
+        _buildMilestoneCard(theme, isDark, "Longest Streak", "${appState.streak.days > 24 ? appState.streak.days : 24} Days", Icons.bolt_rounded, Colors.pink),
+        _buildMilestoneCard(theme, isDark, "Total XP Earned", "${450 + appState.streak.xp} XP", Icons.stars_rounded, Colors.amber),
       ],
     );
   }

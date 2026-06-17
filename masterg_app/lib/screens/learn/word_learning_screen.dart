@@ -40,18 +40,29 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCurrentWord();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCurrentWord();
+    });
   }
 
   Future<void> _fetchCurrentWord() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      final appState = AppStateProvider.of(context);
+      final token = appState.accessToken;
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+
       final response = await http.get(
         Uri.parse("http://127.0.0.1:8000/api/vocabulary/current-word/?level=${widget.levelCode}"),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -126,10 +137,17 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
     });
 
     try {
-      // POST next-word increments backend pointer by 1 and returns new word details
+      final appState = AppStateProvider.of(context);
+      final token = appState.accessToken;
+      final Map<String, String> headers = {"Content-Type": "application/json"};
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+
+      // POST next-word increments pointer and returns new word details
       final response = await http.post(
         Uri.parse("http://127.0.0.1:8000/api/vocabulary/next-word/"),
-        headers: {"Content-Type": "application/json"},
+        headers: headers,
         body: jsonEncode({"level": widget.levelCode}),
       );
 

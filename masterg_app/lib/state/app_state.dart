@@ -62,6 +62,7 @@ class AppState extends ChangeNotifier {
   bool _isLoggedIn = false;
   String _userName = "Jenil Navapara";
   String _userLevel = "Intermediate (B1)";
+  String? _accessToken;
 
   late Streak _streak;
   late UserStats _stats;
@@ -148,6 +149,7 @@ class AppState extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   String get userName => _userName;
   String get userLevel => _userLevel;
+  String? get accessToken => _accessToken;
   Streak get streak => _streak;
   UserStats get stats => _stats;
   List<VocabularyWord> get vocabularyList => _vocabularyList;
@@ -187,6 +189,9 @@ class AppState extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         _isLoggedIn = true;
+        if (data['tokens'] != null) {
+          _accessToken = data['tokens']['access'];
+        }
         if (data['user'] != null) {
           final userData = data['user'];
           _userName = userData['username'] ?? "Jenil Navapara";
@@ -217,6 +222,7 @@ class AppState extends ChangeNotifier {
 
   void logout() {
     _isLoggedIn = false;
+    _accessToken = null;
     notifyListeners();
   }
 
@@ -232,6 +238,9 @@ class AppState extends ChangeNotifier {
 
       if (response.statusCode == 201) {
         _isLoggedIn = true;
+        if (data['tokens'] != null) {
+          _accessToken = data['tokens']['access'];
+        }
         if (data['user'] != null) {
           final userData = data['user'];
           _userName = userData['username'] ?? "Jenil Navapara";
