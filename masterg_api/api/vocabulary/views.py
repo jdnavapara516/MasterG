@@ -311,27 +311,23 @@ def next_word_view(request):
     progress.save()
 
     # Check daily target completed (5 words)
+    just_completed = False
     if progress.completed_words >= 5:
         # Streak Logic
         last_date = profile.last_learning_date
         
-        if last_date == today:
-            # Already completed today, no update
-            pass
-        elif last_date == today - timedelta(days=1):
-            # Completed yesterday, increment streak
-            profile.current_streak += 1
-        else:
-            # Missed a day or first learning
-            profile.current_streak = 1
+        if last_date != today:
+            if last_date == today - timedelta(days=1):
+                # Completed yesterday, increment streak
+                profile.current_streak += 1
+            else:
+                # Missed a day or first learning
+                profile.current_streak = 1
+            profile.last_learning_date = today
+            profile.save()
 
-        profile.last_learning_date = today
-        profile.save()
-
-        return Response({
-            "daily_completed": True,
-            "streak": profile.current_streak
-        }, status=status.HTTP_200_OK)
+        if progress.completed_words == 5:
+            just_completed = True
 
     # Return next word details
     level_words = Vocabulary.objects.filter(level=level)
@@ -347,5 +343,32 @@ def next_word_view(request):
         "sentences": [s.sentence for s in word.sentences.all()],
         "today_progress": progress.completed_words,
         "today_target": 5,
-        "streak": profile.current_streak
+        "streak": profile.current_streak,
+        "daily_completed": just_completed
+    }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def user_profile_view(request):
+    seed_vocabulary_database()
+    user = get_user_from_request(request)
+    profile = get_user_profile(user)
+    
+    # Get daily progress
+    today = timezone.now().date()
+    progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
+
+    words_learned = (
+        profile.a1_pointer +
+        profile.a2_pointer +
+        profile.b1_pointer +
+        profile.b2_pointer +
+        profile.c1_pointer +
+        profile.c2_pointer
+    )
+
+    return Response({
+        "streak": profile.current_streak,
+        "today_progress": progress.completed_words,
+        "words_learned": words_learned,
     }, status=status.HTTP_200_OK)

@@ -126,12 +126,6 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
       return;
     }
 
-    // Check if the current word just completed is the 5th word (completion screen)
-    if (_todayProgress >= _todayTarget) {
-      _showCompletionScreen();
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
@@ -154,29 +148,24 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
-          if (data["daily_completed"] == true) {
-            setState(() {
-              _streak = data["streak"];
-              _todayProgress = 5;
-              _isLoading = false;
-            });
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                final appState = AppStateProvider.of(context);
-                appState.syncVocabularyProgress(5, _streak);
-                appState.addXp(50);
-              }
-            });
-            _showCompletionScreen();
-            return;
-          }
-
           setState(() {
             _updateStateFromData(data);
             _wordHistory.add(data);
             _historyIndex++;
             _isLoading = false;
           });
+
+          // Check if they just completed their daily goal (hit exactly 5)
+          if (data["daily_completed"] == true) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                final appState = AppStateProvider.of(context);
+                appState.syncVocabularyProgress(_todayProgress, _streak);
+                appState.addXp(50);
+              }
+            });
+            _showCompletionDialog();
+          }
         }
       } else {
         setState(() {
@@ -201,101 +190,126 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
     }
   }
 
-  void _showCompletionScreen() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-                  // Success Trophy/Ribbon Icon
-                  Center(
-                    child: Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppTheme.goldGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.35),
-                            blurRadius: 24,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.workspace_premium_rounded,
-                        color: Colors.white,
-                        size: 64,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    "Daily Goal Completed",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Congratulations! You completed today's vocabulary goal by studying 5 target words.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Color(0xFF64748B),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Streak and XP badges
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSummaryBadge(Icons.local_fire_department_rounded, "Streak Updated", Colors.orange),
-                      const SizedBox(width: 14),
-                      _buildSummaryBadge(Icons.flash_on_rounded, "+50 XP Earned", Colors.purple),
-                    ],
-                  ),
-                  const Spacer(),
-                  
-                  // Return Button
-                  Container(
-                    height: 56,
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: AppTheme.cardBorderRadius),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Success Trophy/Ribbon Icon
+                Center(
+                  child: Container(
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
-                      borderRadius: AppTheme.buttonBorderRadius,
+                      shape: BoxShape.circle,
+                      gradient: AppTheme.goldGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.35),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shadowColor: Colors.transparent,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context); // Pop completion, returns to levels
-                      },
-                      child: const Text("Return to Home", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: Colors.white,
+                      size: 50,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Daily Goal Completed",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Congratulations! You completed today's vocabulary goal by studying 5 target words.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Streak and XP badges
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildSummaryBadge(Icons.local_fire_department_rounded, "Streak Updated", Colors.orange),
+                    const SizedBox(width: 10),
+                    _buildSummaryBadge(Icons.flash_on_rounded, "+50 XP", Colors.purple),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: AppTheme.buttonBorderRadius),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(dialogContext); // Close dialog
+                        },
+                        child: const Text(
+                          "Keep Learning",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: AppTheme.buttonBorderRadius,
+                        ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(dialogContext); // Close dialog
+                            Navigator.pop(context); // Return to home/levels
+                          },
+                          child: const Text(
+                            "Done",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -653,9 +667,9 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        _todayProgress >= _todayTarget ? "Finish" : "Next",
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      const Text(
+                                        "Next",
+                                        style: TextStyle(fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(Icons.arrow_forward_rounded, size: 18),

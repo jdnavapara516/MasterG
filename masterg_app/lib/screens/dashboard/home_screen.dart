@@ -5,8 +5,23 @@ import '../learn/vocabulary_levels_screen.dart';
 import '../learn/grammar_quiz_screen.dart';
 import '../learn/speaking_practice_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppStateProvider.of(context).fetchUserProfile();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

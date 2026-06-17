@@ -265,6 +265,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchUserProfile() async {
+    if (!_isLoggedIn) return;
+    try {
+      final response = await http.get(
+        Uri.parse("http://127.0.0.1:8000/api/vocabulary/profile/"),
+        headers: _accessToken != null ? {"Authorization": "Bearer $_accessToken"} : {},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _streak.days = data["streak"] ?? _streak.days;
+        _vocabGoalCount = data["today_progress"] ?? _vocabGoalCount;
+        _stats.wordsLearned = data["words_learned"] ?? _stats.wordsLearned;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Quietly fail or ignore if offline
+    }
+  }
+
   void updateProfileLevel(String newLevel) {
     _userLevel = newLevel;
     notifyListeners();
