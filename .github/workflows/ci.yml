@@ -1,0 +1,78 @@
+name: MasterG CI Pipeline
+
+on:
+  push:
+    branches: [ main, 'feature/**', 'fix/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-checks:
+    name: Backend Tests & Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd masterg_api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django System Checks
+        run: |
+          cd masterg_api
+          python api/manage.py check
+
+      - name: Verify Database Migrations
+        run: |
+          cd masterg_api
+          python api/manage.py makemigrations --check --dry-run
+
+      - name: Execute Backend Test Suite
+        run: |
+          cd masterg_api
+          python api/manage.py test authentication grammar vocabulary
+
+  frontend-checks:
+    name: Frontend Tests & Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter Dependencies
+        run: |
+          cd masterg_app
+          flutter pub get
+
+      - name: Analyze Code
+        run: |
+          cd masterg_app
+          flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Widget & State Tests
+        run: |
+          cd masterg_app
+          flutter test
+
+      - name: Verify Web Release Build
+        run: |
+          cd masterg_app
+          flutter build web --no-wasm-dry-run

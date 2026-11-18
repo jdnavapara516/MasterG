@@ -40,29 +40,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildHeader(context, appState, theme),
-                  const SizedBox(height: 22),
-                  _buildHeroCard(context, appState, theme),
-                  const SizedBox(height: 26),
-                  _buildQuickStats(appState, theme, isDark),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle(theme, "Learning Modules"),
-                  const SizedBox(height: 14),
-                  _buildLearningModules(context, appState, theme, isDark),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle(theme, "Daily Goals"),
-                  const SizedBox(height: 14),
-                  _buildDailyGoals(context, appState, theme, isDark),
-                ]),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await appState.fetchUserProfile();
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _buildHeader(context, appState, theme),
+                    const SizedBox(height: 22),
+                    _buildHeroCard(context, appState, theme),
+                    const SizedBox(height: 26),
+                    _buildQuickStats(appState, theme, isDark),
+                    const SizedBox(height: 28),
+                    _buildSectionTitle(theme, "Learning Modules"),
+                    const SizedBox(height: 14),
+                    _buildLearningModules(context, appState, theme, isDark),
+                    const SizedBox(height: 28),
+                    _buildSectionTitle(theme, "Daily Goals"),
+                    const SizedBox(height: 14),
+                    _buildDailyGoals(context, appState, theme, isDark),
+                  ]),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

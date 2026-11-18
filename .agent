@@ -1,0 +1,79 @@
+# AGENTS.md / .agent
+
+Guidance for AI coding agents and developers working across the MasterG monorepo (`masterg_api` and `masterg_app`).
+
+---
+
+## 1. Project Overview
+
+MasterG is an AI-powered English language learning platform:
+- **`masterg_api/`**: Django 6 REST Framework backend using SQLite / PostgreSQL, simplejwt authentication, and Google Gemini integration.
+- **`masterg_app/`**: Flutter 3 (Dart 3) cross-platform client (Android, iOS, macOS, Web) with Material 3 theming, `InheritedNotifier` state management, and TTS audio synthesis.
+
+---
+
+## 2. Essential Commands
+
+### Backend (`masterg_api/`)
+```bash
+# Setup & activate venv
+source venv/bin/activate
+
+# Apply migrations
+python api/manage.py migrate
+
+# Seed vocabulary database
+python api/vocabulary/script.py
+
+# Run unit tests
+python api/manage.py test authentication grammar vocabulary
+
+# Start local server
+python api/manage.py runserver 127.0.0.1:8000
+```
+
+### Frontend (`masterg_app/`)
+```bash
+# Fetch dependencies
+flutter pub get
+
+# Static analysis
+flutter analyze
+
+# Run test suite
+flutter test
+
+# Run app locally (macOS / Chrome)
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8000/api
+flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:8000/api
+
+# Build web release
+flutter build web --no-wasm-dry-run
+```
+
+---
+
+## 3. Agent Skills Directory (`.agents/skills/`)
+
+Specialized skills are maintained under `.agents/skills/` (mirrored in `.claude/`):
+- `code-review`: PR review checklist, invariants, security audits, and architectural rules.
+- `commit-check`: Pre-commit quality gate verifying tests, migrations, and lints before every git commit.
+- `local-dev-setup`: Complete local initialization and environment configuration guide.
+- `debug-reports`: Common runtime issues, root causes, and diagnostic checklists (JWT 401s, SQLite locks, TTS audio).
+- `api-parity`: Enforcing API contract synchronization between Flutter client and Django REST endpoints.
+
+---
+
+## 4. Architectural Invariants & Rules
+
+1. **Authentication Invariant**:
+   - Every protected endpoint in `masterg_api` must enforce `@permission_classes([IsAuthenticated])`.
+   - Never fallback to `User.objects.first()` in views handling user progression.
+2. **API Contract Parity**:
+   - Any endpoint called in `masterg_app` via `ApiConfig.apiBaseUrl` must exist in Django URL patterns.
+   - If an endpoint is added or changed, update `docs/API.md` and both client and server models simultaneously.
+3. **State Management**:
+   - `AppState` in `masterg_app/lib/state/app_state.dart` is the single source of truth for auth tokens, stats, and streaks.
+   - Main navigation tabs in `main_shell.dart` must use `IndexedStack` to preserve active tab states.
+4. **Pronunciation & TTS**:
+   - All vocabulary word learning screens must provide interactive Text-To-Speech (TTS) playback so students hear English pronunciation aloud.

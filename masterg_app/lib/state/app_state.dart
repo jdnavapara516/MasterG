@@ -347,6 +347,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void loginAsGuest() {
+    _isLoggedIn = true;
+    _userName = "Guest Learner";
+    _userLevel = "A1";
+    _streak = Streak(days: 1, longestDays: 1);
+    _stats = UserStats(
+      wordsLearned: 5,
+      grammarLessonsCompleted: 1,
+      speakingSessionsCompleted: 1,
+      chatSessionsCompleted: 2,
+    );
+    _pointBalance = 50;
+    notifyListeners();
+  }
+
   Future<http.Response> authenticatedRequest(
     Future<http.Response> Function(String token) sendRequest,
   ) async {

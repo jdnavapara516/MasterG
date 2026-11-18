@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../../state/app_state.dart';
@@ -36,13 +37,36 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
   // Track previous word states in local history for "Previous" navigation
   final List<Map<String, dynamic>> _wordHistory = [];
   int _historyIndex = -1;
+  final FlutterTts _tts = FlutterTts();
 
   @override
   void initState() {
     super.initState();
+    _initTts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchCurrentWord();
     });
+  }
+
+  Future<void> _initTts() async {
+    try {
+      await _tts.setLanguage("en-US");
+      await _tts.setSpeechRate(0.45);
+    } catch (_) {}
+  }
+
+  Future<void> _speakWord() async {
+    try {
+      if (_word.isNotEmpty) {
+        await _tts.speak(_word);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
   }
 
   Future<void> _fetchCurrentWord() async {
@@ -549,12 +573,34 @@ class _WordLearningScreenState extends State<WordLearningScreen> {
                                       ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  "Pronunciation: $_pronunciation",
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: 14,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "Pronunciation: $_pronunciation",
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: _speakWord,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.volume_up_rounded,
+                                          size: 18,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 18),
                                 const Divider(),

@@ -286,6 +286,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     : const Text("Log In", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppTheme.buttonBorderRadius,
+                                  ),
+                                ),
+                                icon: const Icon(Icons.explore_outlined, size: 20),
+                                label: const Text(
+                                  "Explore as Guest",
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                ),
+                                onPressed: () {
+                                  AppStateProvider.of(context).loginAsGuest();
+                                },
+                              ),
+                            ),
                           ],
                         ),
                       ),

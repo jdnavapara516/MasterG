@@ -4,6 +4,10 @@ from django.contrib.auth.models import User
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    points = models.IntegerField(default=0)
+    speaking_sessions = models.IntegerField(default=0)
+    chat_sessions = models.IntegerField(default=0)
     
     a1_pointer = models.IntegerField(default=0)
     a2_pointer = models.IntegerField(default=0)

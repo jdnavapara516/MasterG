@@ -1,26 +1,30 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
+import random
+from datetime import timedelta
 from django.contrib.auth.models import User
 from django.utils import timezone
-from datetime import date, timedelta
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
 from .models import UserProfile, Vocabulary, VocabularySentence, DailyVocabularyProgress
-
-
+from grammar.models import UserGrammarProgress
 
 def get_user_profile(user):
-    profile, created = UserProfile.objects.get_or_create(
+    profile, _ = UserProfile.objects.get_or_create(
         user=user,
         defaults={
-            'current_streak': 12,
-            'a1_pointer': 45,
-            'a2_pointer': 12,
+            'current_streak': 0,
+            'longest_streak': 0,
+            'points': 0,
+            'speaking_sessions': 0,
+            'chat_sessions': 0,
+            'a1_pointer': 0,
+            'a2_pointer': 0,
             'b1_pointer': 0,
             'b2_pointer': 0,
             'c1_pointer': 0,
             'c2_pointer': 0,
-            'last_learning_date': timezone.now().date() - timedelta(days=1)
         }
     )
     return profile
@@ -28,7 +32,6 @@ def get_user_profile(user):
 def get_user_from_request(request):
     if request.user and request.user.is_authenticated:
         return request.user
-    # Fallback to first user for easy local testing
     user = User.objects.first()
     if not user:
         user = User.objects.create_user(username='guest', email='guest@masterg.com', password='password123')
@@ -56,30 +59,25 @@ def current_word_view(request):
     profile = get_user_profile(user)
     level = request.query_params.get('level', 'A1')
 
-    # Get pointer for selected level
-    pointer = 0
-    if level == 'A1':
-        pointer = profile.a1_pointer
-    elif level == 'A2':
-        pointer = profile.a2_pointer
-    elif level == 'B1':
-        pointer = profile.b1_pointer
-    elif level == 'B2':
-        pointer = profile.b2_pointer
-    elif level == 'C1':
-        pointer = profile.c1_pointer
-    elif level == 'C2':
-        pointer = profile.c2_pointer
+    pointer_map = {
+        'A1': profile.a1_pointer,
+        'A2': profile.a2_pointer,
+        'B1': profile.b1_pointer,
+        'B2': profile.b2_pointer,
+        'C1': profile.c1_pointer,
+        'C2': profile.c2_pointer,
+    }
+    pointer = pointer_map.get(level, 0)
 
-    # Fetch word matching level and wrapped word_no
     level_words = Vocabulary.objects.filter(level=level)
     if not level_words.exists():
-        return Response({"error": "No words found for this level"}, status=status.HTTP_404_NOT_FOUND)
+        level_words = Vocabulary.objects.all()
+    if not level_words.exists():
+        return Response({"error": "No words found"}, status=status.HTTP_404_NOT_FOUND)
 
     word_index = pointer % level_words.count()
     word = level_words.all()[word_index]
 
-    # Get daily progress
     today = timezone.now().date()
     progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
 
@@ -102,7 +100,6 @@ def next_word_view(request):
     profile = get_user_profile(user)
     level = request.data.get('level', 'A1')
 
-    # Increment pointer
     if level == 'A1':
         profile.a1_pointer += 1
         pointer = profile.a1_pointer
@@ -124,35 +121,33 @@ def next_word_view(request):
     else:
         pointer = 0
 
+    profile.points += 15
     profile.save()
 
-    # Update Daily Progress
     today = timezone.now().date()
     progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
     progress.completed_words += 1
     progress.save()
 
-    # Check daily target completed (5 words)
     just_completed = False
     if progress.completed_words >= 5:
-        # Streak Logic
         last_date = profile.last_learning_date
-        
         if last_date != today:
             if last_date == today - timedelta(days=1):
-                # Completed yesterday, increment streak
                 profile.current_streak += 1
             else:
-                # Missed a day or first learning
                 profile.current_streak = 1
+            if profile.current_streak > profile.longest_streak:
+                profile.longest_streak = profile.current_streak
             profile.last_learning_date = today
             profile.save()
 
         if progress.completed_words == 5:
             just_completed = True
 
-    # Return next word details
     level_words = Vocabulary.objects.filter(level=level)
+    if not level_words.exists():
+        level_words = Vocabulary.objects.all()
     word_index = pointer % level_words.count()
     word = level_words.all()[word_index]
 
@@ -174,8 +169,8 @@ def next_word_view(request):
 def user_profile_view(request):
     user = get_user_from_request(request)
     profile = get_user_profile(user)
+    grammar_progress, _ = UserGrammarProgress.objects.get_or_create(user=user)
     
-    # Get daily progress
     today = timezone.now().date()
     progress, _ = DailyVocabularyProgress.objects.get_or_create(user=user, date=today)
 
@@ -188,10 +183,79 @@ def user_profile_view(request):
         profile.c2_pointer
     )
 
-    display_name = user.email.split('@')[0].capitalize()
+    display_name = user.email.split('@')[0].capitalize() if user.email else user.username
     return Response({
         "username": display_name,
+        "level": "Beginner (A1)",
         "streak": profile.current_streak,
+        "longest_streak": profile.longest_streak,
         "today_progress": progress.completed_words,
+        "point": profile.points,
         "words_learned": words_learned,
+        "grammar_lessons_completed": grammar_progress.completed_topics,
+        "speaking_sessions": profile.speaking_sessions,
+        "chat_sessions": profile.chat_sessions,
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rapid_fire_words_view(request):
+    level = request.data.get('level')
+    query = Vocabulary.objects.filter(level=level) if level else Vocabulary.objects.all()
+    all_words = list(query)
+    
+    if len(all_words) < 10:
+        all_words = list(Vocabulary.objects.all())
+
+    selected = random.sample(all_words, min(10, len(all_words)))
+    while len(selected) < 10 and selected:
+        selected.append(random.choice(all_words))
+
+    words_payload = [
+        {
+            'english': w.word,
+            'gujarati': w.gujarati_meaning,
+            'pronunciation': w.pronunciation,
+        }
+        for w in selected[:10]
+    ]
+
+    return Response({'words': words_payload}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def revision_view(request):
+    user = request.user
+    profile = get_user_profile(user)
+    grammar_progress, _ = UserGrammarProgress.objects.get_or_create(user=user)
+
+    words_learned = (
+        profile.a1_pointer +
+        profile.a2_pointer +
+        profile.b1_pointer +
+        profile.b2_pointer +
+        profile.c1_pointer +
+        profile.c2_pointer
+    )
+
+    count = int(request.query_params.get('count', 20))
+    all_words = list(Vocabulary.objects.all().prefetch_related('sentences'))
+    selected = random.sample(all_words, min(count, len(all_words))) if all_words else []
+
+    words_payload = [
+        {
+            'word': w.word,
+            'pronunciation': w.pronunciation,
+            'gujarati_meaning': w.gujarati_meaning,
+            'english_meaning': w.english_meaning,
+            'level': w.level,
+            'sentences': [s.sentence for s in w.sentences.all()],
+        }
+        for w in selected
+    ]
+
+    return Response({
+        'total_words_learned': words_learned,
+        'completed_grammar_topics': grammar_progress.completed_topic_ids or [],
+        'words': words_payload,
     }, status=status.HTTP_200_OK)
